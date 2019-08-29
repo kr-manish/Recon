@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import argparse
 
@@ -32,13 +33,22 @@ def argsParser():
 # Sub-domain finder
 def runAmass(Target, path):
     out = os.path.join(path['amass'], 'amass.txt')
+    
+    if os.path.isfile(out):
+        os.remove(out)
+
+    if os.path.isdir(os.path.join(os.getenv('HOME'), 'snap', 'amass')):
+        shutil.rmtree(os.path.join(os.getenv('HOME'), 'snap', 'amass'))
+    else:
+        print("~/snap/amass Directory is not present")
+
     print("{}==================Running AMASS================={}".format(
         colors.OKGREEN, colors.ENDC))
-    runAmass = subprocess.Popen(['amass', 'enum', '-active',
+    run_amass = subprocess.Popen(['amass', 'enum', '-active',
                                  '-src', '-ip', '-o', '{}'.format(out),
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    print runAmass.communicate()
+    print run_amass.communicate()
 
 
 def runSubfinder():
@@ -95,7 +105,6 @@ if __name__ == "__main__":
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir)
     resultDir = create_dir(recon, target_dir)
-    print(resultDir)
 
     # RunReconTools
     RunRecon(Target, resultDir)
