@@ -30,9 +30,15 @@ def argsParser():
     return parser.parse_args()
 
 # Sub-domain finder
-def runAmass():
+def runAmass(Target, path):
+    out = os.path.join(path['amass'], 'amass.txt')
     print("{}==================Running AMASS================={}".format(
         colors.OKGREEN, colors.ENDC))
+    runAmass = subprocess.Popen(['amass', 'enum', '-active',
+                                 '-src', '-ip', '-o', '{}'.format(out),
+                                 '-d', '{}'.format(Target)],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    print runAmass.communicate()
 
 
 def runSubfinder():
@@ -61,7 +67,8 @@ def create_dir(tools, output_dir):
     for tool in tools:
         toolDir = os.path.join(output_dir, tool)
         if os.path.isdir(toolDir):
-            print("{}: Directory already present".format(toolDir))
+            print("{0}{1}{2}: Directory already present".format(
+                colors.OKGREEN,toolDir,colors.ENDC))
         else:
             os.makedirs(toolDir)
         
