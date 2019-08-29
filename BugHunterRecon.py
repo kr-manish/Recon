@@ -1,4 +1,5 @@
 import os
+import subprocess
 import argparse
 
 class colors:
@@ -12,7 +13,7 @@ class colors:
     UNDERLINE = '\033[4m'
 
 
-OUTPUT_DIR = os.path.join(os.getenv('HOME'), 'BugB')
+OUTPUT_DIR = os.path.join(os.getenv('HOME'), 'BugBounty')
 if os.path.isdir(OUTPUT_DIR):
     print("Bug Bounty folder -> {0}{1}{2}{3}".format(colors.BOLD, colors.YELLOW, OUTPUT_DIR,
                                                   colors.ENDC))
@@ -30,7 +31,8 @@ def argsParser():
 
 # Sub-domain finder
 def runAmass():
-    pass
+    print("{}==================Running AMASS================={}".format(
+        colors.OKGREEN, colors.ENDC))
 
 
 def runSubfinder():
@@ -54,11 +56,9 @@ def runEyeWitness():
     pass
 
 
-def create_dir(output_dir):
+def create_dir(tools, output_dir):
     dirs = {}
-    recon = ['amass', 'subfinder', 'gobuster', 'massdns', 'masscan',
-             'eyewitness']
-    for tool in recon:
+    for tool in tools:
         toolDir = os.path.join(output_dir, tool)
         if os.path.isdir(toolDir):
             print("{}: Directory already present".format(toolDir))
@@ -69,20 +69,26 @@ def create_dir(output_dir):
     return dirs
 
 
-def RunRecon():
-    pass
+def RunRecon(Target, resultDir):
+    """
+    This is to run all the recon tools on the target
+    """
+    runAmass(Target, resultDir)
 
 
 if __name__ == "__main__":
     args = argsParser()
-    print args.target
+    Target = args.target
+
+    recon = ['amass', 'subfinder', 'gobuster', 'massdns', 'masscan',
+             'eyewitness']
 
     # Target directory
-    target_dir = os.path.join(OUTPUT_DIR, args.target)
+    target_dir = os.path.join(OUTPUT_DIR, Target)
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir)
-    resultDir = create_dir(target_dir)
+    resultDir = create_dir(recon, target_dir)
     print(resultDir)
 
     # RunReconTools
-    RunRecon()
+    RunRecon(Target, resultDir)
