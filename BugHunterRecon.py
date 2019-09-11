@@ -13,6 +13,9 @@ class colors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+FAIL = 1
+PASS = 0
+
 
 OUTPUT_DIR = os.path.join(os.getenv('HOME'), 'BugBounty')
 if os.path.isdir(OUTPUT_DIR):
@@ -48,19 +51,25 @@ def runAmass(Target, path):
                                  '-src', '-ip', '-o', '{}'.format(out),
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    print run_amass.communicate()
+    stdout, stderr = run_amass.communicate()
+    if(stderr):
+        print("{0} Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
+        print(stderr)
+        return FAIL, FAIL
+    else:
+        print("{0} Amass completed {1}".format(colors.OKGREEN, colors.ENDC))
+        return PASS, out
 
-
-def runSubfinder():
-    pass
 
 # Content-Discovery
 def runGobuster():
     pass
 
 
-def runMassDns():
-    pass
+def runMassDns(domainFile):
+    print (domainFile)
+    print("{}==================Running MASSDNS================{}".format(
+        colors.OKGREEN, colors.ENDC))
 
 
 # Port Scanning
@@ -90,7 +99,11 @@ def RunRecon(Target, resultDir):
     """
     This is to run all the recon tools on the target
     """
-    runAmass(Target, resultDir)
+    retcode, outFile = runAmass(Target, resultDir)
+    if not retcode:
+        retcode = runMassDns(outFile)
+    else:
+        print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
 
 
 if __name__ == "__main__":
