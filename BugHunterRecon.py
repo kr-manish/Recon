@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import argparse
@@ -52,13 +53,19 @@ def runAmass(Target, path):
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = run_amass.communicate()
+    stderr = 0
     if(stderr):
         print("{0} Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
         print(stderr)
         return FAIL, FAIL
     else:
-        print("{0} Amass completed {1}".format(colors.OKGREEN, colors.ENDC))
-        return PASS, out
+        # Extract the domains from the amass output
+        print("extracting domains from the Amass output")
+        domFile = os.path.join(path['amass'], 'domains.txt')
+        cmd = r"awk -F']' '{{print $2}}' {0} | awk -F' ' '{{print $1}}' > {1}".format(out, domFile)
+        runCmd = subprocess.call([cmd], shell=True)
+        print("{0} ===========Amass completed============ {1}".format(colors.OKGREEN, colors.ENDC))
+        return PASS, domFile
 
 
 # Content-Discovery
