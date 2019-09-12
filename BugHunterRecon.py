@@ -1,4 +1,6 @@
 import os
+import re
+import shutil
 import subprocess
 import argparse
 
@@ -11,6 +13,9 @@ class colors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+FAIL = 1
+PASS = 0
 
 
 OUTPUT_DIR = os.path.join(os.getenv('HOME'), 'BugBounty')
@@ -32,25 +37,46 @@ def argsParser():
 # Sub-domain finder
 def runAmass(Target, path):
     out = os.path.join(path['amass'], 'amass.txt')
+    
+    if os.path.isfile(out):
+        os.remove(out)
+
+    if os.path.isdir(os.path.join(os.getenv('HOME'), 'snap', 'amass')):
+        shutil.rmtree(os.path.join(os.getenv('HOME'), 'snap', 'amass'))
+    else:
+        print("~/snap/amass Directory is not present")
+
     print("{}==================Running AMASS================={}".format(
         colors.OKGREEN, colors.ENDC))
-    runAmass = subprocess.Popen(['amass', 'enum', '-active',
+    run_amass = subprocess.Popen(['amass', 'enum', '-active',
                                  '-src', '-ip', '-o', '{}'.format(out),
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    print runAmass.communicate()
+    stdout, stderr = run_amass.communicate()
+    stderr = 0
+    if(stderr):
+        print("{0} Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
+        print(stderr)
+        return FAIL, FAIL
+    else:
+        # Extract the domains from the amass output
+        print("extracting domains from the Amass output")
+        domFile = os.path.join(path['amass'], 'domains.txt')
+        cmd = r"awk -F']' '{{print $2}}' {0} | awk -F' ' '{{print $1}}' > {1}".format(out, domFile)
+        runCmd = subprocess.call([cmd], shell=True)
+        print("{0} ===========Amass completed============ {1}".format(colors.OKGREEN, colors.ENDC))
+        return PASS, domFile
 
-
-def runSubfinder():
-    pass
 
 # Content-Discovery
 def runGobuster():
     pass
 
 
-def runMassDns():
-    pass
+def runMassDns(domainFile):
+    print (domainFile)
+    print("{}==================Running MASSDNS================{}".format(
+        colors.OKGREEN, colors.ENDC))
 
 
 # Port Scanning
@@ -80,7 +106,11 @@ def RunRecon(Target, resultDir):
     """
     This is to run all the recon tools on the target
     """
-    runAmass(Target, resultDir)
+    retcode, outFile = runAmass(Target, resultDir)
+    if not retcode:
+        retcode = runMassDns(outFile)
+    else:
+        print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
 
 
 if __name__ == "__main__":
@@ -95,7 +125,6 @@ if __name__ == "__main__":
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir)
     resultDir = create_dir(recon, target_dir)
-    print(resultDir)
 
     # RunReconTools
     RunRecon(Target, resultDir)
