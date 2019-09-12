@@ -38,21 +38,22 @@ def argsParser():
 def runAmass(Target, path):
     out = os.path.join(path['amass'], 'amass.txt')
     
-    if os.path.isfile(out):
+    '''if os.path.isfile(out):
         os.remove(out)
 
     if os.path.isdir(os.path.join(os.getenv('HOME'), 'snap', 'amass')):
         shutil.rmtree(os.path.join(os.getenv('HOME'), 'snap', 'amass'))
     else:
-        print("~/snap/amass Directory is not present")
+        print("~/snap/amass Directory is not present")'''
 
     print("{}==================Running AMASS================={}".format(
         colors.OKGREEN, colors.ENDC))
-    run_amass = subprocess.Popen(['amass', 'enum', '-active',
+    '''run_amass = subprocess.Popen(['amass', 'enum', '-active',
                                  '-src', '-ip', '-o', '{}'.format(out),
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    stdout, stderr = run_amass.communicate()
+    stdout, stderr = run_amass.communicate()'''
+    stderr = 0
     if(stderr):
         print("{0} AMASS: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
         print(stderr)
@@ -89,8 +90,29 @@ def runMassDns(domainFile, path):
 
 
 # Port Scanning
-def runMassScan():
-    pass
+def runMassScan(domainFile, path):
+    output = os.path.join(path['masscan'], 'masscan.txt')
+    print("{}==================Running MASSCAN================{}".format(colors.OKGREEN, colors.ENDC))
+    ip_cmd = r'dig +short {}'
+    scan_cmd = r'masscan -p80 {0}'
+    with open(domainFile, 'r') as f:
+        domain = f.readline()
+        while domain:
+            ip = subprocess.Popen([ip_cmd.format(domain)], shell=True, 
+                                 stdout=subprocess.PIPE)
+            print ip.communicate()[0]
+            print(domain)
+            domain = f.readline()
+    '''run_massdns = subprocess.Popen(
+        ['masscan -p1-10000 -oG {0} {1}'.format(output, domainIP)], shell=True)
+    stdout, stderr = run_massdns.communicate()
+    if(stderr):
+        print("{0} MASSCAN: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
+        print(stderr)
+        return FAIL
+    else:
+        print("{0} ===========MASSCAN completed============ {1}".format(colors.OKGREEN, colors.ENDC))
+        return PASS'''
 
 
 def runEyeWitness():
@@ -117,7 +139,7 @@ def RunRecon(Target, resultDir):
     """
     retcode, domain_File = runAmass(Target, resultDir)
     if not retcode:
-        retcode = runMassDns(domain_File, resultDir)
+        #retcode = runMassDns(domain_File, resultDir)
         retcode = runMassScan(domain_File, resultDir)
     else:
         print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
