@@ -53,9 +53,8 @@ def runAmass(Target, path):
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = run_amass.communicate()
-    stderr = 0
     if(stderr):
-        print("{0} Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
+        print("{0} AMASS: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
         print(stderr)
         return FAIL, FAIL
     else:
@@ -73,10 +72,20 @@ def runGobuster():
     pass
 
 
-def runMassDns(domainFile):
-    print (domainFile)
-    print("{}==================Running MASSDNS================{}".format(
-        colors.OKGREEN, colors.ENDC))
+def runMassDns(domainFile, path):
+    output = os.path.join(path['massdns'], 'massdns.txt')
+    resolve = os.path.join(os.getenv('HOME'), 'Tools', 'massdns', 'lists', 'resolvers.txt')
+    print("{}==================Running MASSDNS================{}".format(colors.OKGREEN, colors.ENDC))
+    run_massdns = subprocess.Popen(['massdns -r {0} {1} -o S -w {2}'.format(
+        resolve, domainFile, output)], shell=True)
+    stdout, stderr = run_massdns.communicate()
+    if(stderr):
+        print("{0} MASSDNS: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
+        print(stderr)
+        return FAIL
+    else:
+        print("{0} ===========MASSDNS completed============ {1}".format(colors.OKGREEN, colors.ENDC))
+        return PASS
 
 
 # Port Scanning
@@ -106,9 +115,10 @@ def RunRecon(Target, resultDir):
     """
     This is to run all the recon tools on the target
     """
-    retcode, outFile = runAmass(Target, resultDir)
+    retcode, domain_File = runAmass(Target, resultDir)
     if not retcode:
-        retcode = runMassDns(outFile)
+        retcode = runMassDns(domain_File, resultDir)
+        retcode = runMassScan(domain_File, resultDir)
     else:
         print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
 
