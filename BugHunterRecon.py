@@ -89,30 +89,53 @@ def runMassDns(domainFile, path):
         return PASS
 
 
-# Port Scanning
-def runMassScan(domainFile, path):
-    output = os.path.join(path['masscan'], 'masscan.txt')
-    print("{}==================Running MASSCAN================{}".format(colors.OKGREEN, colors.ENDC))
-    ip_cmd = r'dig +short {}'
-    scan_cmd = r'masscan -p80 {0}'
+def getIPlist(domainFile, path):
+    output = os.path.join(path['masscan'], 'ip_list')
+    all_ip = []
     with open(domainFile, 'r') as f:
         domain = f.readline()
         while domain:
-            ip = subprocess.Popen([ip_cmd.format(domain)], shell=True, 
-                                 stdout=subprocess.PIPE)
-            print ip.communicate()[0]
-            print(domain)
+            ip_cmd = r'dig +short {}'.format(domain)
+            runcmd = subprocess.Popen([ip_cmd], shell=True, stdout=subprocess.PIPE)
+            ip_list = runcmd.communicate()[0].split('\n')
+            for ip in ip_list:
+                valid = re.search(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip)
+                if valid:
+                    all_ip.append(ip)
             domain = f.readline()
-    '''run_massdns = subprocess.Popen(
-        ['masscan -p1-10000 -oG {0} {1}'.format(output, domainIP)], shell=True)
-    stdout, stderr = run_massdns.communicate()
-    if(stderr):
-        print("{0} MASSCAN: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
-        print(stderr)
-        return FAIL
-    else:
-        print("{0} ===========MASSCAN completed============ {1}".format(colors.OKGREEN, colors.ENDC))
-        return PASS'''
+    all_ip = list(dict.fromkeys(all_ip))
+
+    # Write all the IPs to file
+    with open(output, 'w') as f:
+        for ip in all_ip:
+            f.write('%s\n' % ip)
+
+    return all_ip
+
+
+# Port Scanning
+def runMassScan(domainFile, path):
+    print("{}==================Running MASSCAN================{}".format(colors.OKGREEN, colors.ENDC))
+    # ip_cmd = r'dig +short {}'
+    scan_cmd = r'masscan -p80 {0}'
+
+    #Get all the unique IPs from the domains
+    all_ips = getIPlist(domainFile, path)
+    print all_ips
+    for ip in all_ips:
+        output = os.path.join(path['masscan'], ip)
+        run_massdns = subprocess.Popen(
+            ['masscan -p80 -oG {0} {1}'.format(output, ip)], shell=True)
+        stdout, stderr = run_massdns.communicate()
+        if(stderr):
+            print("{0} MASSCAN: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
+            print(stderr)
+            return FAIL
+        else:
+            print("==========={} scan completed============".format(ip))
+    print("{0}==================MASSCAN Completed================{1}".
+          format(colors.OKGREEN, colors.ENDC))
+    return PASS
 
 
 def runEyeWitness():
