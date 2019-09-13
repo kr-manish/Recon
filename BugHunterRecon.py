@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import shutil
 import subprocess
@@ -38,22 +39,21 @@ def argsParser():
 def runAmass(Target, path):
     out = os.path.join(path['amass'], 'amass.txt')
     
-    '''if os.path.isfile(out):
+    if os.path.isfile(out):
         os.remove(out)
 
     if os.path.isdir(os.path.join(os.getenv('HOME'), 'snap', 'amass')):
         shutil.rmtree(os.path.join(os.getenv('HOME'), 'snap', 'amass'))
     else:
-        print("~/snap/amass Directory is not present")'''
+        print("~/snap/amass Directory is not present")
 
     print("{}==================Running AMASS================={}".format(
         colors.OKGREEN, colors.ENDC))
-    '''run_amass = subprocess.Popen(['amass', 'enum', '-active',
+    run_amass = subprocess.Popen(['amass', 'enum', '-active',
                                  '-src', '-ip', '-o', '{}'.format(out),
                                  '-d', '{}'.format(Target)],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    stdout, stderr = run_amass.communicate()'''
-    stderr = 0
+    stdout, stderr = run_amass.communicate()
     if(stderr):
         print("{0} AMASS: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
         print(stderr)
@@ -90,43 +90,70 @@ def runMassDns(domainFile, path):
 
 
 def getIPlist(domainFile, path):
-    output = os.path.join(path['masscan'], 'ip_list')
+    ip_list_file = os.path.join(path['masscan'], 'ip_list')
     all_ip = []
+    domain_dict = {}
     with open(domainFile, 'r') as f:
-        domain = f.readline()
+        domain = f.readline().rstrip()
         while domain:
+            # Get IPs
             ip_cmd = r'dig +short {}'.format(domain)
             runcmd = subprocess.Popen([ip_cmd], shell=True, stdout=subprocess.PIPE)
             ip_list = runcmd.communicate()[0].split('\n')
+
+            # Get IPs related to a domain in a dictionary
+            # Convert to dictionary of empty list in which ports will go
+            ip_dict = {ip:[] for ip in ip_list}
+            # removing '' key from dictionary
+            ip_dict = {k:v for k, v in ip_dict.items() if k is not ''}
+            domain_dict[domain] = ip_dict
             for ip in ip_list:
                 valid = re.search(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip)
                 if valid:
                     all_ip.append(ip)
-            domain = f.readline()
+            domain = f.readline().rstrip()
+    
     all_ip = list(dict.fromkeys(all_ip))
 
     # Write all the IPs to file
-    with open(output, 'w') as f:
+    with open(ip_list_file, 'w') as f:
         for ip in all_ip:
             f.write('%s\n' % ip)
 
-    return all_ip
+    return all_ip, domain_dict
+
+
+def fillPort(ports, ip, domain_dict):
+    for domain,_ip in domain_dict.iteritems():
+        if ip in _ip:
+            domain_dict[k][_ip] = ports
+
+    return domain_dict
 
 
 # Port Scanning
 def runMassScan(domainFile, path):
+    domain_ip_file = os.path.join(path['masscan'], 'domain_ip_dict.json')
     print("{}==================Running MASSCAN================{}".format(colors.OKGREEN, colors.ENDC))
     # ip_cmd = r'dig +short {}'
     scan_cmd = r'masscan -p80 {0}'
 
     #Get all the unique IPs from the domains
-    all_ips = getIPlist(domainFile, path)
-    print all_ips
+    all_ips, domain_dict = getIPlist(domainFile, path)
     for ip in all_ips:
-        output = os.path.join(path['masscan'], ip)
+        ip_output = os.path.join(path['masscan'], ip)
+        cmd = r"grep 'Ports:' {} | awk -F':' '{{print $4}}'".format(ip_output)
         run_massdns = subprocess.Popen(
-            ['masscan -p80 -oG {0} {1}'.format(output, ip)], shell=True)
+            ['masscan -p80 -oG {0} {1}'.format(ip_output, ip)], shell=True)
         stdout, stderr = run_massdns.communicate()
+
+        # Update the dictionary
+        with open(ip_output, 'r') as f:
+            gcmd = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+            ports = gcmd.communicate()[0].split('\n')
+            ports.remove('')
+            domain_ip_dict = fillPort(ports, ip, domain_dict)
+
         if(stderr):
             print("{0} MASSCAN: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
             print(stderr)
@@ -135,6 +162,10 @@ def runMassScan(domainFile, path):
             print("==========={} scan completed============".format(ip))
     print("{0}==================MASSCAN Completed================{1}".
           format(colors.OKGREEN, colors.ENDC))
+
+    with open(domain_ip_file, 'w') as f:
+        json.dump(domain_ip_dict, f)
+
     return PASS
 
 
@@ -162,7 +193,7 @@ def RunRecon(Target, resultDir):
     """
     retcode, domain_File = runAmass(Target, resultDir)
     if not retcode:
-        #retcode = runMassDns(domain_File, resultDir)
+        retcode = runMassDns(domain_File, resultDir)
         retcode = runMassScan(domain_File, resultDir)
     else:
         print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
