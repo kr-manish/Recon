@@ -138,7 +138,7 @@ def RunRecon(Target, resultDir):
     """
     retcode, domain_File = runAmass(Target, resultDir)
     if not retcode:
-        #retcode = runMassDns(domain_File, resultDir)
+        retcode = runMassDns(domain_File, resultDir)
         retcode = runMassScan(domain_File, resultDir)
     else:
         print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
