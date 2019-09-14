@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import argparse
+from util import *
 
 class colors:
     HEADER = '\033[95m'
@@ -49,10 +50,10 @@ def runAmass(Target, path):
 
     print("{}==================Running AMASS================={}".format(
         colors.OKGREEN, colors.ENDC))
-    run_amass = subprocess.Popen(['amass', 'enum', '-active',
-                                 '-src', '-ip', '-o', '{}'.format(out),
-                                 '-d', '{}'.format(Target)],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    amass_cmd = 'amass enum -active -src -ip -o {0} -d {1}'.format(out, Target)
+    run_amass = subprocess.Popen([amass_cmd],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, shell=True)
     stdout, stderr = run_amass.communicate()
     if(stderr):
         print("{0} AMASS: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
@@ -89,48 +90,6 @@ def runMassDns(domainFile, path):
         return PASS
 
 
-def getIPlist(domainFile, path):
-    ip_list_file = os.path.join(path['masscan'], 'ip_list')
-    all_ip = []
-    domain_dict = {}
-    with open(domainFile, 'r') as f:
-        domain = f.readline().rstrip()
-        while domain:
-            # Get IPs
-            ip_cmd = r'dig +short {}'.format(domain)
-            runcmd = subprocess.Popen([ip_cmd], shell=True, stdout=subprocess.PIPE)
-            ip_list = runcmd.communicate()[0].split('\n')
-
-            # Get IPs related to a domain in a dictionary
-            # Convert to dictionary of empty list in which ports will go
-            ip_dict = {ip:[] for ip in ip_list}
-            # removing '' key from dictionary
-            ip_dict = {k:v for k, v in ip_dict.items() if k is not ''}
-            domain_dict[domain] = ip_dict
-            for ip in ip_list:
-                valid = re.search(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip)
-                if valid:
-                    all_ip.append(ip)
-            domain = f.readline().rstrip()
-    
-    all_ip = list(dict.fromkeys(all_ip))
-
-    # Write all the IPs to file
-    with open(ip_list_file, 'w') as f:
-        for ip in all_ip:
-            f.write('%s\n' % ip)
-
-    return all_ip, domain_dict
-
-
-def fillPort(ports, ip, domain_dict):
-    for domain,_ip in domain_dict.iteritems():
-        if ip in _ip:
-            domain_dict[k][_ip] = ports
-
-    return domain_dict
-
-
 # Port Scanning
 def runMassScan(domainFile, path):
     domain_ip_file = os.path.join(path['masscan'], 'domain_ip_dict.json')
@@ -144,7 +103,7 @@ def runMassScan(domainFile, path):
         ip_output = os.path.join(path['masscan'], ip)
         cmd = r"grep 'Ports:' {} | awk -F':' '{{print $4}}'".format(ip_output)
         run_massdns = subprocess.Popen(
-            ['masscan -p80 -oG {0} {1}'.format(ip_output, ip)], shell=True)
+            ['masscan -p1-10000 -oG {0} {1}'.format(ip_output, ip)], shell=True)
         stdout, stderr = run_massdns.communicate()
 
         # Update the dictionary
@@ -173,27 +132,13 @@ def runEyeWitness():
     pass
 
 
-def create_dir(tools, output_dir):
-    dirs = {}
-    for tool in tools:
-        toolDir = os.path.join(output_dir, tool)
-        if os.path.isdir(toolDir):
-            print("{0}{1}{2}: Directory already present".format(
-                colors.OKGREEN,toolDir,colors.ENDC))
-        else:
-            os.makedirs(toolDir)
-        
-        dirs[tool] = toolDir
-    return dirs
-
-
 def RunRecon(Target, resultDir):
     """
     This is to run all the recon tools on the target
     """
     retcode, domain_File = runAmass(Target, resultDir)
     if not retcode:
-        retcode = runMassDns(domain_File, resultDir)
+        #retcode = runMassDns(domain_File, resultDir)
         retcode = runMassScan(domain_File, resultDir)
     else:
         print("{0} Something Went wrong{1}".format(colors.FAIL, colors.ENDC))
