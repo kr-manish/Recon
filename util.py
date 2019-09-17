@@ -1,4 +1,5 @@
 import subprocess
+from BugHunterRecon import colors
 import os
 import re
 import json

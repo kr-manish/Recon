@@ -101,12 +101,15 @@ def runMassScan(domainFile, path):
     all_ips, domain_dict = getIPlist(domainFile, path)
     for ip in all_ips:
         ip_output = os.path.join(path['masscan'], ip)
-        cmd = r"grep 'Ports:' {} | awk -F':' '{{print $4}}'".format(ip_output)
         run_massdns = subprocess.Popen(
             ['masscan -p1-10000 -oG {0} {1}'.format(ip_output, ip)], shell=True)
         stdout, stderr = run_massdns.communicate()
 
+        if stderr:
+            print("{0} Something wrong with the port scan!!! {1}".format(colors.FAIL, colors.ENDC))
+
         # Update the dictionary
+        cmd = r"grep 'Ports:' {} | awk -F':' '{{print $4}}'".format(ip_output)
         with open(ip_output, 'r') as f:
             gcmd = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             ports = gcmd.communicate()[0].split('\n')
