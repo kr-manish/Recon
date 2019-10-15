@@ -14,6 +14,7 @@ echo "You have following options --
 	-- 3 - Masscan
 	-- 4 - EyeWitness
 	-- 5 - SecList and filter-resolved
+	-- 6 - GoBuster
 	-- all - Run all of them
 	-- leave - Leave the Setup"
 
@@ -80,6 +81,12 @@ do
 		    snap install go --classic
 		    go get github.com/tomnomnom/hacks/filter-resolved
 		    echo "F_PATH=/root/go/bin" >> ~/.bashrc
+		    ;;&
+	    6 | all)
+		    echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		    echo "+                          GoBuster                                 +"
+		    echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		    go get github.com/OJ/gobuster
 		    ;;
 
 	    leave)
