@@ -19,15 +19,7 @@ class colors:
 FAIL = 1
 PASS = 0
 
-
 OUTPUT_DIR = os.path.join(os.getenv('HOME'), 'BugBounty')
-if os.path.isdir(OUTPUT_DIR):
-    print("Bug Bounty folder -> {0}{1}{2}{3}".format(colors.BOLD, colors.YELLOW, OUTPUT_DIR,
-                                                  colors.ENDC))
-else:
-    os.makedirs(OUTPUT_DIR)
-    print("Bug Bounty folder -> {0}{1}{2}".format(colors.YELLOW, OUTPUT_DIR,
-                                                  colors.ENDC))
 
 # print colors.FAIL+ "Warning: ...." + colors.ENDC
 
@@ -78,8 +70,11 @@ def runMassDns(domainFile, path):
     output = os.path.join(path['massdns'], 'massdns.txt')
     resolve = os.path.join(os.getenv('HOME'), 'Tools', 'massdns', 'lists', 'resolvers.txt')
     print("{}==================Running MASSDNS================{}".format(colors.OKGREEN, colors.ENDC))
-    run_massdns = subprocess.Popen(['massdns -r {0} {1} -o S -w {2}'.format(
-        resolve, domainFile, output)], shell=True)
+    dnsCmd = '/root/Tools/massdns/bin/massdns -r {0} {1} -o S -w {2}'.format(resolve, domainFile, output)
+    run_massdns = subprocess.Popen([dnsCmd],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT,
+                                   shell=True)
     stdout, stderr = run_massdns.communicate()
     if(stderr):
         print("{0} MASSDNS: Something went wrong!!! {1}".format(colors.FAIL, colors.ENDC))
@@ -95,14 +90,17 @@ def runMassScan(domainFile, path):
     domain_ip_file = os.path.join(path['masscan'], 'domain_ip_dict.json')
     print("{}==================Running MASSCAN================{}".format(colors.OKGREEN, colors.ENDC))
     # ip_cmd = r'dig +short {}'
-    scan_cmd = r'masscan -p80 {0}'
+    # scan_cmd = r'masscan -p1-10000 -oG {0} {1}'.format(ip_output, ip)
 
     #Get all the unique IPs from the domains
     all_ips, domain_dict = getIPlist(domainFile, path)
     for ip in all_ips:
         ip_output = os.path.join(path['masscan'], ip)
-        run_massdns = subprocess.Popen(
-            ['masscan -p1-10000 -oG {0} {1}'.format(ip_output, ip)], shell=True)
+        scan_cmd = r'masscan -p1-100 -oG {0} {1}'.format(ip_output, ip)
+        run_massdns = subprocess.Popen([scan_cmd],
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT,
+                                       shell=True)
         stdout, stderr = run_massdns.communicate()
 
         if stderr:
@@ -140,6 +138,8 @@ def RunRecon(Target, resultDir):
     This is to run all the recon tools on the target
     """
     retcode, domain_File = runAmass(Target, resultDir)
+    #retcode=0
+    #domain_File=os.path.join(resultDir['amass'], 'domains.txt')
     if not retcode:
         retcode = runMassDns(domain_File, resultDir)
         retcode = runMassScan(domain_File, resultDir)
@@ -155,6 +155,12 @@ if __name__ == "__main__":
              'eyewitness']
 
     # Target directory
+    if os.path.isdir(OUTPUT_DIR):
+        print("Bug Bounty folder -> {0}{1}{2}{3}".format(colors.BOLD, colors.YELLOW, OUTPUT_DIR,colors.ENDC))
+    else:
+        os.makedirs(OUTPUT_DIR)
+        print("Bug Bounty folder -> {0}{1}{2}".format(colors.YELLOW, OUTPUT_DIR,colors.ENDC))
+
     target_dir = os.path.join(OUTPUT_DIR, Target)
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir)
