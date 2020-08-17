@@ -91,6 +91,7 @@ do
 		    ;;
 
 	    leave)
+		    echo "export PATH=$PATH:$AMASS_PATH:$F_PATH" >> ~/.bashrc
 		    source ~/.bashrc
 		    exit
 		    ;;
