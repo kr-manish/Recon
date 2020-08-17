@@ -1,12 +1,12 @@
 #!/bin/bash
 
-Tools_dir='/root/Tools'
+Tools_dir=$HOME/Tools
 
 mkdir -p $Tools_dir
 
 echo "=======This is to setup all the tools required for recon ======"
 
-sudo apt-get update
+# sudo apt-get update
 
 echo "You have following options --
 	-- 1 - Amass
@@ -29,6 +29,7 @@ do
 		    echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		    sudo apt install -y snapd
 		    sudo snap install amass
+		    sleep 60
 		    sudo systemctl start snapd
 		    sudo systemctl enable snapd
 		    sudo systemctl start apparmor
@@ -45,7 +46,7 @@ do
 
 		    git clone https://github.com/blechschmidt/massdns.git "$Tools_dir/massdns"
 		    cd $Tools_dir/massdns && make
-		    echo 'alias massdns="/root/Tools/massdns/bin/massdns"' >> ~/.bashrc
+		    echo 'alias massdns="$HOME/Tools/massdns/bin/massdns"' >> ~/.bashrc
 		    ;;&
 
 	    3 | all)
@@ -80,7 +81,7 @@ do
 		    git clone https://github.com/danielmiessler/SecLists.git "$Tools_dir/SecLists"
 		    snap install go --classic
 		    go get github.com/tomnomnom/hacks/filter-resolved
-		    echo "F_PATH=/root/go/bin" >> ~/.bashrc
+		    echo "F_PATH=$HOME/go/bin" >> ~/.bashrc
 		    ;;&
 	    6 | all)
 		    echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -90,7 +91,6 @@ do
 		    ;;
 
 	    leave)
-		    echo "export PATH=$PATH:$AMASS_PATH:$F_PATH" >> ~/.bashrc
 		    source ~/.bashrc
 		    exit
 		    ;;
